@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+*.env
+
+# Large source data — regenerable via pipeline scripts
+data/delpher/
+data/cbs/scans/
+data/aieeda/*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

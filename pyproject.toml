@@ -1,0 +1,13 @@
+[project]
+name = "selection-politics"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.14.1",
+    "beautifulsoup4>=4.15.0",
+    "duckdb>=1.5.4",
+    "lxml>=6.1.1",
+    "pandas>=3.0.3",
+    "pyarrow>=24.0.0",
+    "shapely>=2.1.2",
+]
