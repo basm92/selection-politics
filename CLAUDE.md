@@ -87,6 +87,42 @@ NLGIS is a cross-cutting resource: `data/nlgis/crosswalk.duckdb` provides munici
 
 Session-specific operational notes (endpoints, scrape quirks, build state) live in Claude's memory system rather than in repo files. The memory index is at `~/.claude/projects/-home-bas-Documents-git-selection-politics/memory/MEMORY.md`. Check there before re-scraping or re-verifying sources.
 
+## Data regeneration
+
+Large raw data files are excluded from git via `.gitignore`. To rebuild from scratch:
+
+```bash
+# NLGIS municipality maps (93 × ~400 KB TopoJSON, 1848–1940)
+uv run python code/data_wrangling/nlgis/nlgis_step1_download_maps.py
+
+# AIEEDA interwar election data (34 MB zip — download from OSF, ingest to DuckDB)
+uv run python code/data_wrangling/aieeda/aieeda_step1_ingest.py
+
+# Delpher Staatscourant survey + PDF download (~1.3 GB of issue scans)
+uv run python code/data_wrangling/delpher/delpher_step1_survey_staatscourant.py
+uv run python code/data_wrangling/delpher/delpher_step2_download_pdfs.py
+
+# CBS historical election statistics page scans (~263 MB)
+uv run python code/data_wrangling/cbs/cbs_step1_index_scans.py
+uv run python code/data_wrangling/cbs/cbs_step2_download_scans.py
+
+# Full panel reassembly (reads DuckDBs, writes data/panel/*.parquet)
+uv run python code/data_wrangling/panel/panel_step1_assemble.py
+```
+
+**When new data artifacts are added** (new parquets, DuckDBs, or downloaded files committed to git), update this section with the commands to regenerate them, and update the list above if any source's size or file count changes materially.
+
+## What's committed vs. excluded
+
+| Committed (small, regenerable with effort) | Excluded (large, regenerable) |
+|---|---|
+| `data/panel/*.parquet` + `data/panel/panel.duckdb` — analysis-ready panel | `data/delpher/` — PDFs (~1.3 GB) + DuckDB |
+| `data/huygens/huygens.duckdb` — scraped candidate data | `data/cbs/scans/` — JPEG page scans (~263 MB) |
+| `data/aieeda/aieeda.duckdb` — ingested municipal party panel | `data/aieeda/*.zip` — OSF download (34 MB) |
+| `data/nlgis/maps/*.topojson` — municipality boundaries | |
+| `data/nlgis/crosswalk.duckdb` — municipality crosswalk | |
+| `data/cbs/cbs.duckdb` — scan index metadata (not the JPEGs) | |
+
 ## Security
 
 `examples/.env` contains Google and OpenAI API keys. Do not commit this file. It is not used by the current Phase 1 pipelines — those keys were for earlier example work.
