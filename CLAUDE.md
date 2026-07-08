@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase research data-engineering project: **"Politicians' Status and Entry into Politics — Dutch Lower House (Tweede Kamer), 1848–1940."** Builds a linked candidate × election panel, resolves candidates to genealogical records, classifies occupational/dynastic status, and studies how the 1917 district→PR electoral reform affected political selection.
 
-**Current checkpoint:** Phase 1 panel assembly complete for 1848–1918 (Huygens scrape). Post-1917 candidate-level data requires OCR transcription of Staatscourant PDFs already downloaded to `data/delpher/staatscourant/`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested.
+**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. This is the `post_1917_candidates.md` CHECKPOINT — report counts/quality before starting Phase 2 (`phase_2_and_onward.md`).
 
 Key driving documents:
 - `prompt.md` — full project brief, phases 0–5
-- `phase0_feasibility_report.md` — per-source coverage audit (completed 2026-07-07)
+- `archived/phase0_feasibility_report.md` — per-source coverage audit (completed 2026-07-07; findings absorbed into the data-sources table below)
 - `phase_2_and_onward.md` — detailed phase 2–5 spec with checkpoints
 - `post_1917_candidates.md` — transcription pipeline spec for Staatscourant PDFs
 
@@ -85,7 +85,7 @@ NLGIS is a cross-cutting resource: `data/nlgis/crosswalk.duckdb` provides munici
 
 ## Memory notes
 
-Operational notes (endpoints, scrape quirks, build state, in-flight decisions) live **in the repo** at `docs/agent_memory/` — see its `README.md` index. Check there before re-scraping or re-verifying sources, and update those files when facts change. Mid-task handoffs (like the step-6 LLM-parse plan) sit at the repo root (`step6_llm_parsing_plan.md`). Claude's local memory system (`~/.claude/projects/.../memory/`) only holds pointers to these repo files.
+Operational notes (endpoints, scrape quirks, build state, in-flight decisions) live **in the repo** at `docs/agent_memory/` — see its `README.md` index. Check there before re-scraping or re-verifying sources, and update those files when facts change. Completed mid-task handoffs are moved to `archived/` once their work lands (e.g. `archived/step6_llm_parsing_plan.md`, the step-6 LLM-parse plan — done). Claude's local memory system (`~/.claude/projects/.../memory/`) only holds pointers to these repo files.
 
 ## Data regeneration
 
@@ -106,8 +106,19 @@ uv run python code/data_wrangling/delpher/delpher_step2_download_pdfs.py
 uv run python code/data_wrangling/cbs/cbs_step1_index_scans.py
 uv run python code/data_wrangling/cbs/cbs_step2_download_scans.py
 
+# Post-1917 candidate transcription (Delpher OCR pipeline; steps 4 & 6b spend
+# ~$1.30 of Gemini flash-lite — ask before running). Reads the archived
+# Staatscourant PDFs, writes data/delpher/delpher.duckdb.
+uv run python code/data_wrangling/delpher/delpher_step3_locate_pages.py
+uv run python code/data_wrangling/delpher/delpher_step4_ocr_pages.py
+uv run python code/data_wrangling/delpher/delpher_step5_parse_kandidatenlijsten.py
+uv run python code/data_wrangling/delpher/delpher_step6_parse_uitslagen.py
+uv run python code/data_wrangling/delpher/delpher_step6b_llm_parse_uitslagen.py
+
 # Full panel reassembly (reads DuckDBs, writes data/panel/*.parquet)
+# step 1 = district era 1848-1918; step 2 = merge post-1917 -> unified 1848-1937
 uv run python code/data_wrangling/panel/panel_step1_assemble.py
+uv run python code/data_wrangling/panel/panel_step2_merge_post1917.py
 ```
 
 **When new data artifacts are added** (new parquets, DuckDBs, or downloaded files committed to git), update this section with the commands to regenerate them, and update the list above if any source's size or file count changes materially.
@@ -116,7 +127,7 @@ uv run python code/data_wrangling/panel/panel_step1_assemble.py
 
 | Committed (small, regenerable with effort) | Excluded (large, regenerable) |
 |---|---|
-| `data/panel/*.parquet` + `data/panel/panel.duckdb` — analysis-ready panel | `data/delpher/` — PDFs (~1.3 GB) + DuckDB |
+| `data/panel/*.parquet` (unified 1848-1937 `candidates_panel` + `persons_post1917`, `elections_post1917`, `gekozen_unmatched`) + `data/panel/panel.duckdb` | `data/delpher/` — PDFs (~1.3 GB) + `delpher.duckdb` (OCR/parse tables) |
 | `data/huygens/huygens.duckdb` — scraped candidate data | `data/cbs/scans/` — JPEG page scans (~263 MB) |
 | `data/aieeda/aieeda.duckdb` — ingested municipal party panel | `data/aieeda/*.zip` — OSF download (34 MB) |
 | `data/nlgis/maps/*.topojson` — municipality boundaries | |

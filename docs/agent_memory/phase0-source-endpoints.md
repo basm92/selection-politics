@@ -1,7 +1,7 @@
 # Phase 0 source endpoints
 
 Verified data-source endpoints and coverage facts from the Phase 0 audit
-(2026-07-07); full report in `phase0_feasibility_report.md` at repo root.
+(2026-07-07); full report in `archived/phase0_feasibility_report.md`.
 
 - Huygens election db: `https://resources.huygens.knaw.nl/verkiezingentweedekamer`
   (NOT verkiezingentweedekamer.huygens.knaw.nl — doesn't resolve). CSV:

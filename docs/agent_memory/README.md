@@ -16,5 +16,6 @@ re-verifying sources.
   Staatscourant OCR pipeline (delpher steps 3–6), Gemini run decisions,
   parsing quirks, current step-6 status
 
-See also `step6_llm_parsing_plan.md` at the repo root for the current
-mid-task handoff (step 6 LLM-parse plan + remaining TODOs).
+Step 6 (LLM vote-table parse) is complete; its handoff note is archived at
+`archived/step6_llm_parsing_plan.md`. Current work: panel step 2 merges the
+post-1917 rows into `candidates_panel` (1848–1937).
