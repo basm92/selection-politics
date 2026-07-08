@@ -85,7 +85,7 @@ NLGIS is a cross-cutting resource: `data/nlgis/crosswalk.duckdb` provides munici
 
 ## Memory notes
 
-Session-specific operational notes (endpoints, scrape quirks, build state) live in Claude's memory system rather than in repo files. The memory index is at `~/.claude/projects/-home-bas-Documents-git-selection-politics/memory/MEMORY.md`. Check there before re-scraping or re-verifying sources.
+Operational notes (endpoints, scrape quirks, build state, in-flight decisions) live **in the repo** at `docs/agent_memory/` — see its `README.md` index. Check there before re-scraping or re-verifying sources, and update those files when facts change. Mid-task handoffs (like the step-6 LLM-parse plan) sit at the repo root (`step6_llm_parsing_plan.md`). Claude's local memory system (`~/.claude/projects/.../memory/`) only holds pointers to these repo files.
 
 ## Data regeneration
 
