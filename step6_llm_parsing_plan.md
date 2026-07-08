@@ -1,20 +1,21 @@
 # Step 6: switching from rule-based parsing to LLM structured output
 
-**Status note written 2026-07-08, mid-session.** This documents where the
-post-1917 pipeline stands and a plan to replace/augment the rule-based
-uitslag parser with a second Gemini pass over the already-archived OCR text.
+**Status: DONE 2026-07-08.** The LLM parser (`delpher_step6b_llm_parse_uitslagen.py`)
+is implemented and has run against all 183 pages with rule-based checksum
+failures. See results below.
 
 ## Where we are
 
-Pipeline steps 3–5 are **complete**; step 6 is ~95 % done via rule-based
-parsing; steps 7 (panel merge) and the checkpoint report are **not started**.
+Pipeline steps 3–6 are **complete**; step 7 (panel merge) and the checkpoint
+report are **not started**.
 
 | Step | Script (`code/data_wrangling/delpher/`) | State |
 |---|---|---|
 | 3 | `delpher_step3_locate_pages.py` | done — 616 target pages located via embedded PDF text layer |
 | 4 | `delpher_step4_ocr_pages.py` | done — all 616 pages OCR'd with gemini-3.1-flash-lite (raw text archived in `ocr_pages`, ~$1 spent, user-authorized) |
 | 5 | `delpher_step5_parse_kandidatenlijsten.py` | done — 27,109 candidate rows, 18 kieskringen × 6 years, zero positional anomalies |
-| 6 | `delpher_step6_parse_uitslagen.py` | **in progress** — see numbers below |
+| 6 | `delpher_step6_parse_uitslagen.py` | **done — rule-based baseline** (2,521 blocks, 61–84 % checksum-ok) |
+| 6b | `delpher_step6b_llm_parse_uitslagen.py` | **done — LLM hybrid pass** (Gemini flash-lite structured output, 183 pages re-parsed, see results below) |
 | 7 | `panel_step2_merge_post1917.py` | not started |
 
 All tables live in `data/delpher/delpher.duckdb`: `page_texts`,
@@ -23,20 +24,23 @@ All tables live in `data/delpher/delpher.duckdb`: `page_texts`,
 `voorkeur_stemmen` / `lijst_uitslagen` / `gekozen` / `uitslag_issues`
 (step 6 outputs, rebuilt on every rerun — parsing is offline and free).
 
-### Step 6 results as of this session
+### Step 6 (rule-based) baseline → Step 6b (LLM hybrid) final results
 
-Block coverage = share of expected (kieskring × lijst) vote blocks found;
-ok_rate = share of found blocks whose votes sum exactly to the printed
-stemcijfer (a checksum, so `ok` blocks are essentially error-free).
+| year | rule-based blocks | rule-based ok_rate | LLM blocks | LLM ok_rate | improvement |
+|---|---|---|---|---|---|
+| 1918 | 383 | 0.799 | **384** | **0.859** | +7.5%, +1 block found |
+| 1922 | 549 | 0.842 | 549 | **0.856** | +1.7% |
+| 1925 | 418 | 0.722 | 418 | **0.775** | +7.3% |
+| 1929 | 372 | 0.672 | **378** | **0.720** | +7.1%, +6 blocks found |
+| 1933 | 463 | 0.613 | **473** | **0.647** | +5.5%, +10 blocks found |
+| 1937 | 336 | 0.467 | **338** | **0.547** | +17.1%, +2 blocks found |
 
-| year | coverage | blocks found | checksum ok_rate | elected (want 100) |
-|---|---|---|---|---|
-| 1918 | 0.997 | 383 | 0.80 | 100 |
-| 1922 | 0.991 | 549 | 0.84 | **99** |
-| 1925 | 0.998 | 418 | 0.72 | 100 |
-| 1929 | 0.976 | 372 | 0.67 | 100 |
-| 1933 | 0.979 | 463 | 0.61 | **99** |
-| 1937 | 0.994 | 336 | 0.47 | 100 |
+**19 new blocks found** that the rule-based parser missed. Remaining checksum
+failures are OCR digit errors (e.g. "58591" misread as "53591"), not structural
+parsing errors. Elected members (`gekozen`) table is from the rule-based parser
+(100/99/100/100/99/100); the LLM was not used for this section.
+
+Cost: $0.32 (7.6M input + 0.8M output tokens).
 
 28 blocks missing in total; failed checksums are mostly single-digit OCR
 errors (e.g. sum off by 500 from one misread digit) or 1–2 dropped
