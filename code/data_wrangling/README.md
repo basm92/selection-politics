@@ -29,6 +29,12 @@ uv run python code/data_wrangling/delpher/delpher_step2_download_pdfs.py
 #    step 2: merge post-1917 PR rows (Staatscourant) -> unified 1848-1937
 uv run python code/data_wrangling/panel/panel_step1_assemble.py
 uv run python code/data_wrangling/panel/panel_step2_merge_post1917.py
+
+# 7. PDC/parlement.com biographies -> mp_anchor (Phase 2a; birth/death dates
+#    for elected MPs, used as an entity-resolution anchor in Phase 2b)
+uv run python code/data_wrangling/pdc/pdc_step1_survey_sitemap.py
+uv run python code/data_wrangling/pdc/pdc_step2_scrape_biographies.py
+uv run python code/data_wrangling/pdc/pdc_step3_build_mp_anchor.py
 ```
 
 Outputs land in `data/<source>/` (DuckDB + raw files); the analysis-ready
@@ -54,3 +60,20 @@ candidacy carrying preference `votes`, list `stemcijfer`, `residence`, and an
 `elected` flag propagated from the person-level seat allocation. See
 `persons_post1917` for the deduplicated person-election view and
 `gekozen_unmatched` for the ~11 seated members OCR left unlinkable.
+
+## Phase 2a: MP anchor (PDC/parlement.com)
+
+`data/panel/mp_anchor.parquet` links elected persons in `candidates_panel`
+(`persoon_id` for the district era, `person_key` for the PR era) to a
+parlement.com biography: birth/death date+place and party. Built from
+~5,849 scraped PDC biography pages (`data/pdc/pdc.duckdb`), filtered to the
+914 persons with a Tweede Kamer membership span overlapping 1848-1940, then
+matched to the 921 elected persons in the panel by normalised surname +
+initials (exact, then same-surname/first-initial, then Levenshtein-fuzzy).
+Match rate ~89% (821/921); unmatched persons are in
+`data/panel/mp_anchor_unmatched.parquet` for Phase 2b review. Known gaps:
+a handful of PDC coverage misses (e.g. some inter-war left-wing figures),
+non-standard membership records (e.g. brief ceremonial reappointments
+recorded only as free-text trivia, not a structured function entry), and a
+pre-existing mojibake encoding bug in some Huygens `name_clean` values
+(`Ã` in place of `Æ`/diacritics) inherited from Phase 1.

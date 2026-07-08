@@ -15,7 +15,12 @@ re-verifying sources.
 - [post1917-transcription-state.md](post1917-transcription-state.md) —
   Staatscourant OCR pipeline (delpher steps 3–6), Gemini run decisions,
   parsing quirks, current step-6 status
+- [phase2a-pdc-mp-anchor.md](phase2a-pdc-mp-anchor.md) — PDC/parlement.com
+  biography scrape, bio-page structure, name-matching quirks (y/ij
+  variants, digraph initials, noble-word stripping), mp_anchor match rate
 
 Step 6 (LLM vote-table parse) is complete; its handoff note is archived at
-`archived/step6_llm_parsing_plan.md`. Current work: panel step 2 merges the
-post-1917 rows into `candidates_panel` (1848–1937).
+`archived/step6_llm_parsing_plan.md`. Panel step 2 merged the post-1917 rows
+into `candidates_panel` (1848–1937). Phase 2a (mp_anchor) is done at ~89%
+match rate; current work is Phase 2b (candidate → genealogical person
+linkage via OpenArchieven/GenealogieOnline).

@@ -22,6 +22,10 @@ Verified data-source endpoints and coverage facts from the Phase 0 audit
 - GenealogieOnline name search endpoint is
   `/zoeken/index.php?q=<surname>&vn=<first>&gv=&gt=` (bare `/zoeken/`
   returns an empty shell).
+- PDC/parlement.com (Phase 2a, verified 2026-07-08): no TK-member index
+  page exists; biographies are flat `/biografie/<slug>` URLs discoverable
+  only via `sitemap.xml?page=1..8` (~5,849 found). See
+  `phase2a-pdc-mp-anchor.md` for bio-page structure and match-rate details.
 
 User confirmed AIEEDA as an accepted source mid-audit (interrupted a web
 search to supply it). Checkpoint discipline: stop after each CHECKPOINT

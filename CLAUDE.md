@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase research data-engineering project: **"Politicians' Status and Entry into Politics — Dutch Lower House (Tweede Kamer), 1848–1940."** Builds a linked candidate × election panel, resolves candidates to genealogical records, classifies occupational/dynastic status, and studies how the 1917 district→PR electoral reform affected political selection.
 
-**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. This is the `post_1917_candidates.md` CHECKPOINT — report counts/quality before starting Phase 2 (`phase_2_and_onward.md`).
+**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. Phase 2a (`data/panel/mp_anchor.parquet`, PDC/parlement.com biographies for elected MPs) is done — ~89% match rate (821/921 elected persons). This is the Phase 2a CHECKPOINT — next up is Phase 2b (candidate→genealogical person linkage, `phase_2_and_onward.md`).
 
 Key driving documents:
 - `prompt.md` — full project brief, phases 0–5
@@ -75,6 +75,7 @@ NLGIS is a cross-cutting resource: `data/nlgis/crosswalk.duckdb` provides munici
 | HIP-NL | Utrecht 1909 only | Person-level tax class + income | SPARQL, no auth | NOT a national income source — pilot dataset. Use for Utrecht case study at most |
 | OpenArchieven API | 19th–early 20th c. | Civil registry person records | REST API 1.1 (`api.openarchieven.nl`) | Existing `examples/openarch` pipeline works as-is; template for Phase 2 |
 | GenealogieOnline | 1500–1900+ | Family trees with beroep/lineage | `/zoeken/index.php?q=&vn=&gv=&gt=` | User-contributed, variable quality; use `/zoeken/index.php` not bare `/zoeken/` |
+| PDC/parlement.com | 1848–present | MP biographies: birth/death, party, offices | No index page; biographies live at flat `/biografie/<slug>` URLs discoverable only via `sitemap.xml` (~5,849 pages) | Free page is a "selectie" of the full career (some minor functions may be truncated); some historical figures (esp. inter-war left-wing MPs) have no bio at all; Dutch y/ij spelling variants across sources need folding when name-matching |
 
 ## Key design decisions
 
@@ -119,6 +120,12 @@ uv run python code/data_wrangling/delpher/delpher_step6b_llm_parse_uitslagen.py
 # step 1 = district era 1848-1918; step 2 = merge post-1917 -> unified 1848-1937
 uv run python code/data_wrangling/panel/panel_step1_assemble.py
 uv run python code/data_wrangling/panel/panel_step2_merge_post1917.py
+
+# Phase 2a: PDC/parlement.com MP biographies -> mp_anchor (~5,849 pages,
+# ~50 min at 2 req/s; writes data/pdc/pdc.duckdb + data/panel/mp_anchor*.parquet)
+uv run python code/data_wrangling/pdc/pdc_step1_survey_sitemap.py
+uv run python code/data_wrangling/pdc/pdc_step2_scrape_biographies.py
+uv run python code/data_wrangling/pdc/pdc_step3_build_mp_anchor.py
 ```
 
 **When new data artifacts are added** (new parquets, DuckDBs, or downloaded files committed to git), update this section with the commands to regenerate them, and update the list above if any source's size or file count changes materially.
@@ -127,12 +134,13 @@ uv run python code/data_wrangling/panel/panel_step2_merge_post1917.py
 
 | Committed (small, regenerable with effort) | Excluded (large, regenerable) |
 |---|---|
-| `data/panel/*.parquet` (unified 1848-1937 `candidates_panel` + `persons_post1917`, `elections_post1917`, `gekozen_unmatched`) + `data/panel/panel.duckdb` | `data/delpher/` — PDFs (~1.3 GB) + `delpher.duckdb` (OCR/parse tables) |
+| `data/panel/*.parquet` (unified 1848-1937 `candidates_panel` + `persons_post1917`, `elections_post1917`, `gekozen_unmatched`, `mp_anchor`, `mp_anchor_unmatched`) + `data/panel/panel.duckdb` | `data/delpher/` — PDFs (~1.3 GB) + `delpher.duckdb` (OCR/parse tables) |
 | `data/huygens/huygens.duckdb` — scraped candidate data | `data/cbs/scans/` — JPEG page scans (~263 MB) |
 | `data/aieeda/aieeda.duckdb` — ingested municipal party panel | `data/aieeda/*.zip` — OSF download (34 MB) |
 | `data/nlgis/maps/*.topojson` — municipality boundaries | |
 | `data/nlgis/crosswalk.duckdb` — municipality crosswalk | |
 | `data/cbs/cbs.duckdb` — scan index metadata (not the JPEGs) | |
+| `data/pdc/pdc.duckdb` (~13 MB) — scraped PDC biography pages + parsed functions | |
 
 ## Security
 
