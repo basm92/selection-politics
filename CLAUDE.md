@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase research data-engineering project: **"Politicians' Status and Entry into Politics — Dutch Lower House (Tweede Kamer), 1848–1940."** Builds a linked candidate × election panel, resolves candidates to genealogical records, classifies occupational/dynastic status, and studies how the 1917 district→PR electoral reform affected political selection.
 
-**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. Phase 2a (`data/panel/mp_anchor.parquet`, PDC/parlement.com biographies for elected MPs) is done — ~89% match rate. Phase 2b (`data/panel/candidate_person_pairs.parquet`, OpenArchieven + GenealogieOnline candidate↔person linkage) is done — 95% of the 5,507 distinct candidates have ≥1 pair, winner/loser match-rate gap (72.9% vs 43.7% at score≥0.7) matches the expected direction. Phase 3 (`data/panel/candidate_status.parquet`, occupational HISCO/HISCLASS + dynastic status) is done — for the score≥0.7 subset of candidates (~2,700/5,507 per source): 17.8% own-occupation coverage, 16.2% father-occupation coverage, 2.7% in a detected dynasty group. This is the Phase 3 CHECKPOINT — next up is Phase 4 (wealth, `phase_2_and_onward.md`).
+**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. Phase 2a (`data/panel/mp_anchor.parquet`, PDC/parlement.com biographies for elected MPs) is done — ~89% match rate. Phase 2b (`data/panel/candidate_person_pairs.parquet`, OpenArchieven + GenealogieOnline candidate↔person linkage) is done — 95% of the 5,507 distinct candidates have ≥1 pair, winner/loser match-rate gap (72.9% vs 43.7% at score≥0.7) matches the expected direction. Phase 3 (`data/panel/candidate_status.parquet`, occupational HISCO/HISCLASS + dynastic status) is done — scope widened from an initial score≥0.7 checkpoint to score≥0.5 (~2,700→3,015/5,507 openarch candidates, ~1,866→2,574 genealogieonline) for more coverage at some unquantified precision cost (Phase 2b's hand-labelling checked precision by strata, not by score bin): 21.2% own-occupation coverage, 21.9% father-occupation coverage, 6.0% in a detected dynasty group. This is the Phase 3 CHECKPOINT — next up is Phase 4 (wealth, `phase_2_and_onward.md`).
 
 Key driving documents:
 - `prompt.md` — full project brief, phases 0–5
@@ -138,7 +138,7 @@ uv run python code/data_wrangling/genealogieonline/genealogieonline_step1_query_
 uv run python code/data_wrangling/panel/panel_step4_candidate_person_pairs.py
 
 # Phase 3: occupational/dynastic status (only the best-scoring pair per
-# candidate, score>=0.7, gets detail-page fetches -- ~10-15 min each; writes
+# candidate, score>=0.5, gets detail-page fetches -- ~10-15 min each; writes
 # detail_records/person_pages/candidate_ancestors into the existing openarch/
 # genealogieonline duckdbs, then data/panel/beroep_hisco_matches.parquet,
 # dynasty_edges*.parquet, and candidate_status.parquet)

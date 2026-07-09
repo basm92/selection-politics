@@ -22,7 +22,7 @@
 #             prior_relative_elected, later_relative_any, later_relative_elected
 #
 # Occupational status: for the same best-pair openarch record used in
-# openarch_step2 (score >= 0.7), the candidate's OWN role in that record
+# openarch_step2 (score >= 0.5), the candidate's OWN role in that record
 # (hits.relationtype -- "Kind"/"Bruidegom"/"Bruid") identifies which
 # detail_records row is the candidate and which is the father ("Vader" for a
 # birth record, "Vader van de bruidegom/bruid" for a marriage record).
@@ -54,7 +54,7 @@ DYNASTY_EDGES_PATH = "./data/panel/dynasty_edges.parquet"
 DYNASTY_CANDIDATES_PATH = "./data/panel/dynasty_candidates.parquet"
 OUT_PATH = "./data/panel/candidate_status.parquet"
 
-SCORE_THRESHOLD = 0.7
+SCORE_THRESHOLD = 0.5
 
 _FATHER_RELATION = {
     "Kind": "Vader",

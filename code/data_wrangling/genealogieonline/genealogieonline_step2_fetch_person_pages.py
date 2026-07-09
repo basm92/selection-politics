@@ -10,8 +10,9 @@
 #
 # Scope (see openarch_step2_fetch_details.py's docstring for the same
 # reasoning): only the single best-scoring genealogieonline pair per
-# candidate, score >= 0.7, gets fetched -- about 2,700 candidates' worth of
-# depth-0 seeds, not all 459,557 raw search hits.
+# candidate, score >= 0.5 (widened from the initial 0.7 checkpoint -- see
+# that docstring), gets fetched -- about 2,570 candidates' worth of depth-0
+# seeds, not all 459,557 raw search hits.
 #
 # MAX_DEPTH=3 (~grandfather-to-great-grandfather) is the ancestor window
 # needed for status_step2_dynasty_lineage.py's dynasty definition: two
@@ -46,7 +47,7 @@ from huygens_async_helpers import TokenBucketRateLimiter
 DB_PATH = "./data/genealogieonline/genealogieonline.duckdb"
 PAIRS_PATH = "./data/panel/candidate_person_pairs.parquet"
 
-SCORE_THRESHOLD = 0.7
+SCORE_THRESHOLD = 0.5
 MAX_DEPTH = 3
 RATE = 5.0
 CONCURRENCY = 6

@@ -33,6 +33,7 @@ into `candidates_panel` (1848–1937). Phase 2a (mp_anchor) is done at ~89%
 match rate. Phase 2b (candidate_person_pairs) is done — 95% of candidates
 have >=1 candidate-person pair, winner/loser gap (72.9% vs 43.7% at
 score>=0.7) matches the expected direction. Phase 3 (candidate_status) is
-done — own/father HISCLASS + dynasty indicators for the score>=0.7 subset
-of candidates (see phase3 memory for coverage numbers and the scope
-ceiling). Next up is Phase 4 (wealth).
+done — own/father HISCLASS + dynasty indicators for the score>=0.5 subset
+of candidates (widened from an initial 0.7 checkpoint; see phase3 memory
+for coverage numbers, the scope ceiling, and the unverified 0.5-0.7
+precision caveat). Next up is Phase 4 (wealth).
