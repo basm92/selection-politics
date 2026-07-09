@@ -34,7 +34,8 @@
 # marriage/birth-record snapshot) for convenience.
 #
 # CHECKPOINT numbers are printed at the end -- coverage of own/father HISCLASS
-# and dynasty membership, to report before moving to Phase 4 (wealth).
+# and dynasty membership, to report before moving to Phase 4 (dynasty
+# construction & empirical strategy; wealth/HIP-NL was dropped from the plan).
 #
 # Usage:
 #   uv run python code/data_wrangling/panel/panel_step5_candidate_status.py

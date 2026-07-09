@@ -80,26 +80,20 @@ returns an empty shell).
   independent status proxy — tabulate it alongside HISCLASS.
 - CHECKPOINT.
 
-## Phase 4 — Wealth (limited, per Phase 0 findings)
+## Phase 4 — Dynasty construction & empirical strategy
 
-- HIP-NL is **Utrecht city, 1909 only** (18,339 tax observations; SPARQL at
-  `https://api.druid.datalegend.net/datasets/HIP-NL/HIP-NL/sparql`, no auth,
-  `taxBracketMid` = income-bracket midpoint). Do a Utrecht case study:
-  candidates residing in Utrecht ~1909 × tax register. Frame it as
-  proof-of-concept, and document the national gap explicitly.
-- Substitute wealth proxy to evaluate: Memories van Successie (probate)
-  indexes via OpenArchieven for deceased candidates; also consider the
-  published lists of Eerste Kamer-verkiesbaren (highest-taxed citizens,
-  pre-1917) — search Delpher/Staatscourant for those lists before deciding.
-- CHECKPOINT: state clearly what wealth measure the paper can and cannot
-  support.
-
-## Phase 5 — Dynasty construction & empirical strategy
+**Wealth (formerly Phase 4) skipped by explicit decision, not oversight**:
+HIP-NL only covers Utrecht city 1909 (18,339 tax observations) — too narrow
+a base for a national panel — and the substitute proxies considered
+(Memories van Successie probate indexes, Eerste Kamer-verkiesbaren lists)
+were never pursued. The paper proceeds on occupational (HISCLASS/HISCAM)
+and dynastic status only; state this limitation explicitly rather than
+retrofitting a proxy later.
 
 - Construct per-candidate measures: dynastic status, occupational status
-  (own + father's HISCLASS/HISCAM), wealth (proxy), plus electoral
-  environment (margin to kiesdrempel, runoff presence, district
-  competitiveness pre-1918; list position and party strength post-1917).
+  (own + father's HISCLASS/HISCAM), plus electoral environment (margin to
+  kiesdrempel, runoff presence, district competitiveness pre-1918; list
+  position and party strength post-1917).
 - Literature scan before committing (Dal Bó–Dal Bó–Snyder; Querubin; Rossi;
   Van Coppenolle; Fiva–Smith on Norwegian/Japanese dynasties; Berlinski et
   al. on suffrage reforms): the Dutch value-add is the **1917 district→PR
@@ -120,8 +114,10 @@ returns an empty shell).
 
 ---
 
-**Overarching question** (sharpen, don't force): does wealth/status increase
-the likelihood of selection into politics and of winning, and how did the
-1917 institutional rupture change who selects in? Post-1917 losers now carry
-residences and list positions; pre-1918 losers carry district vote shares —
-design measures that respect that asymmetry rather than papering over it.
+**Overarching question** (sharpen, don't force): does status (occupational,
+dynastic) increase the likelihood of selection into politics and of winning,
+and how did the 1917 institutional rupture change who selects in? (Wealth
+dropped from this question by explicit decision -- see Phase 4 note above.)
+Post-1917 losers now carry residences and list positions; pre-1918 losers
+carry district vote shares — design measures that respect that asymmetry
+rather than papering over it.
