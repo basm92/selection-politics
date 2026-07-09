@@ -26,6 +26,11 @@ re-verifying sources.
   — detail-page fetch (openarch show.json, genealogieonline person pages +
   3-generation ancestor chain), HISCO/HISCLASS matching, dynasty detection
   via shared ancestors, the cross-era vs. within-era same-person finding
+- [phase4-electoral-environment-and-design.md](phase4-electoral-environment-and-design.md)
+  — per-candidacy electoral environment (district-era RD closeness/runoff
+  structure, PR-era list position/party-strength proxy), literature scan,
+  and the ranked empirical-design memo (`phase4_design_memo.md` at repo
+  root); the `later_relative_any` fillna(False) coverage gotcha
 
 Step 6 (LLM vote-table parse) is complete; its handoff note is archived at
 `archived/step6_llm_parsing_plan.md`. Panel step 2 merged the post-1917 rows
@@ -36,6 +41,9 @@ score>=0.7) matches the expected direction. Phase 3 (candidate_status) is
 done — own/father HISCLASS + dynasty indicators for the score>=0.7 subset
 of candidates. Briefly widened to 0.5, then reverted after a hand-labelled
 spot-check measured only ~30% precision in the 0.5-0.7 band (see phase3
-memory + phase3_spotcheck_0.5_0.7_band.csv). Next up is Phase 4 (dynasty
-construction & empirical strategy) -- the prior Phase 4 (wealth/HIP-NL) was
-dropped by explicit decision, see `phase_2_and_onward.md`.
+memory + phase3_spotcheck_0.5_0.7_band.csv). Phase 4 (dynasty construction &
+empirical strategy) is done -- electoral_environment.parquet built, a
+literature scan run, and a ranked design memo written (see phase4 memory
+above); the prior Phase 4 (wealth/HIP-NL) was dropped by explicit decision,
+see `phase_2_and_onward.md`. This was the FINAL CHECKPOINT before
+estimation -- estimation itself has not started.

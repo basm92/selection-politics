@@ -112,6 +112,20 @@ retrofitting a proxy later.
   identification the data supports, with power/coverage numbers from the
   actual panel. FINAL CHECKPOINT before any estimation.
 
+**DONE (2026-07-09)**: electoral-environment measures built by
+`code/data_wrangling/panel/panel_step6_electoral_environment.py` →
+`data/panel/electoral_environment.parquet` (per-candidacy grain: district-era
+race margins/runoff structure/RD closeness; PR-era list position/length and
+a list-vote-share party-strength proxy, since no party name exists for any
+PR-era candidate). Literature scan and the ranked design memo are at
+`phase4_design_memo.md` (repo root). Verdict: (A, primary) pre-1918
+close-election RD on `later_relative_any/elected`, small-N (297 candidates
+with outcome data at ≤5pp bandwidth) — state this as a power ceiling; (B,
+corroborating) family fixed effects on the 64 dynasty groups spanning both
+eras; (C, motivating/framing only, NOT causal) full-panel descriptive DiD
+around 1917. This is the Phase 4 CHECKPOINT and the FINAL CHECKPOINT before
+any estimation — estimation itself has not started.
+
 ---
 
 **Overarching question** (sharpen, don't force): does status (occupational,
