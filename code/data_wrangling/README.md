@@ -35,6 +35,13 @@ uv run python code/data_wrangling/panel/panel_step2_merge_post1917.py
 uv run python code/data_wrangling/pdc/pdc_step1_survey_sitemap.py
 uv run python code/data_wrangling/pdc/pdc_step2_scrape_biographies.py
 uv run python code/data_wrangling/pdc/pdc_step3_build_mp_anchor.py
+
+# 8. Candidate roster + OpenArchieven/GenealogieOnline linkage (Phase 2b)
+#    step1 (openarch) and step1 (genealogieonline) can run in parallel
+uv run python code/data_wrangling/panel/panel_step3_candidate_roster.py
+uv run python code/data_wrangling/openarch/openarch_step1_query_candidates.py
+uv run python code/data_wrangling/genealogieonline/genealogieonline_step1_query_candidates.py
+uv run python code/data_wrangling/panel/panel_step4_candidate_person_pairs.py
 ```
 
 Outputs land in `data/<source>/` (DuckDB + raw files); the analysis-ready
@@ -77,3 +84,25 @@ non-standard membership records (e.g. brief ceremonial reappointments
 recorded only as free-text trivia, not a structured function entry), and a
 pre-existing mojibake encoding bug in some Huygens `name_clean` values
 (`Ã` in place of `Æ`/diacritics) inherited from Phase 1.
+
+## Phase 2b: candidate → genealogical person linkage
+
+`data/panel/candidate_person_pairs.parquet` links every distinct candidate
+in `candidates_panel` (5,507 people, deduped from 35,615 candidacy rows) to
+plausible OpenArchieven civil-registration records and GenealogieOnline
+family-tree persons, confidence-scored rather than filtered. `panel_step3`
+builds the shared candidate roster (birth-year search window: exact from
+`mp_anchor` where available, else `[year_max-75, year_min-30]`, since
+passive suffrage was constant at age 30 for 1848-1937). `openarch` and
+`genealogieonline` step1 scripts then search each candidate's surname
+(**must be the raw spelling** — searching the scoring-normalised form
+silently zeroed ~40% of candidates, see
+`docs/agent_memory/phase2b-candidate-linkage.md`) and `panel_step4` scores
+every hit on surname/initials/year/place agreement, gated so a wrong
+first-name/initials or wrong surname can't be "rescued" by the other
+features lining up by coincidence. 95% of candidates have ≥1 pair; score
+≥0.7 for 72.9% of winners vs 43.7% of losers (the expected direction — no
+birth-date anchor and common surnames make losers harder to link). Score
+weights were tuned against a 100-sample hand-labelled set (AI-labelled, not
+independently human-verified) stratified across famous MPs, obscure losers,
+and common surnames.

@@ -11,6 +11,7 @@ __pycache__/
 data/delpher/
 data/cbs/scans/
 data/aieeda/*.zip
+data/openarch/
 
 # OS
 .DS_Store

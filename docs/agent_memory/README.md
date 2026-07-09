@@ -18,9 +18,15 @@ re-verifying sources.
 - [phase2a-pdc-mp-anchor.md](phase2a-pdc-mp-anchor.md) — PDC/parlement.com
   biography scrape, bio-page structure, name-matching quirks (y/ij
   variants, digraph initials, noble-word stripping), mp_anchor match rate
+- [phase2b-candidate-linkage.md](phase2b-candidate-linkage.md) — OpenArchieven
+  + GenealogieOnline candidate linkage, API quirks, the surname-search bug
+  (search must use the raw surname, not the scoring-normalised form —
+  silently zeroed ~40% of candidates), hand-labelled score calibration
 
 Step 6 (LLM vote-table parse) is complete; its handoff note is archived at
 `archived/step6_llm_parsing_plan.md`. Panel step 2 merged the post-1917 rows
 into `candidates_panel` (1848–1937). Phase 2a (mp_anchor) is done at ~89%
-match rate; current work is Phase 2b (candidate → genealogical person
-linkage via OpenArchieven/GenealogieOnline).
+match rate. Phase 2b (candidate_person_pairs) is done — 95% of candidates
+have >=1 candidate-person pair, winner/loser gap (72.9% vs 43.7% at
+score>=0.7) matches the expected direction. Next up is Phase 3
+(occupational/dynastic status).
