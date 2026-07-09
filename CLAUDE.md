@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase research data-engineering project: **"Politicians' Status and Entry into Politics — Dutch Lower House (Tweede Kamer), 1848–1940."** Builds a linked candidate × election panel, resolves candidates to genealogical records, classifies occupational/dynastic status, and studies how the 1917 district→PR electoral reform affected political selection.
 
-**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. Phase 2a (`data/panel/mp_anchor.parquet`, PDC/parlement.com biographies for elected MPs) is done — ~89% match rate. Phase 2b (`data/panel/candidate_person_pairs.parquet`, OpenArchieven + GenealogieOnline candidate↔person linkage) is done — 95% of the 5,507 distinct candidates have ≥1 pair, winner/loser match-rate gap (72.9% vs 43.7% at score≥0.7) matches the expected direction. This is the Phase 2b CHECKPOINT — next up is Phase 3 (occupational/dynastic status, `phase_2_and_onward.md`).
+**Current checkpoint:** Unified `candidates_panel` now spans **1848–1937**. Phase 1 district era (1848–1918, Huygens) plus the post-1917 PR era (1918–1937) transcribed from Staatscourant PDFs via the Delpher OCR pipeline (delpher steps 3–6b) and merged by `panel_step2_merge_post1917.py`. Party-level municipal panel 1922–1937 (AIEEDA) is ingested. Phase 2a (`data/panel/mp_anchor.parquet`, PDC/parlement.com biographies for elected MPs) is done — ~89% match rate. Phase 2b (`data/panel/candidate_person_pairs.parquet`, OpenArchieven + GenealogieOnline candidate↔person linkage) is done — 95% of the 5,507 distinct candidates have ≥1 pair, winner/loser match-rate gap (72.9% vs 43.7% at score≥0.7) matches the expected direction. Phase 3 (`data/panel/candidate_status.parquet`, occupational HISCO/HISCLASS + dynastic status) is done — for the score≥0.7 subset of candidates (~2,700/5,507 per source): 17.8% own-occupation coverage, 16.2% father-occupation coverage, 2.7% in a detected dynasty group. This is the Phase 3 CHECKPOINT — next up is Phase 4 (wealth, `phase_2_and_onward.md`).
 
 Key driving documents:
 - `prompt.md` — full project brief, phases 0–5
@@ -136,6 +136,17 @@ uv run python code/data_wrangling/panel/panel_step3_candidate_roster.py
 uv run python code/data_wrangling/openarch/openarch_step1_query_candidates.py
 uv run python code/data_wrangling/genealogieonline/genealogieonline_step1_query_candidates.py
 uv run python code/data_wrangling/panel/panel_step4_candidate_person_pairs.py
+
+# Phase 3: occupational/dynastic status (only the best-scoring pair per
+# candidate, score>=0.7, gets detail-page fetches -- ~10-15 min each; writes
+# detail_records/person_pages/candidate_ancestors into the existing openarch/
+# genealogieonline duckdbs, then data/panel/beroep_hisco_matches.parquet,
+# dynasty_edges*.parquet, and candidate_status.parquet)
+uv run python code/data_wrangling/openarch/openarch_step2_fetch_details.py
+uv run python code/data_wrangling/genealogieonline/genealogieonline_step2_fetch_person_pages.py
+uv run python code/data_wrangling/status/status_step1_hisco_match.py
+uv run python code/data_wrangling/status/status_step2_dynasty_lineage.py
+uv run python code/data_wrangling/panel/panel_step5_candidate_status.py
 ```
 
 **When new data artifacts are added** (new parquets, DuckDBs, or downloaded files committed to git), update this section with the commands to regenerate them, and update the list above if any source's size or file count changes materially.
@@ -144,7 +155,7 @@ uv run python code/data_wrangling/panel/panel_step4_candidate_person_pairs.py
 
 | Committed (small, regenerable with effort) | Excluded (large, regenerable) |
 |---|---|
-| `data/panel/*.parquet` (unified 1848-1937 `candidates_panel` + `persons_post1917`, `elections_post1917`, `gekozen_unmatched`, `mp_anchor`, `mp_anchor_unmatched`, `candidate_roster`, `candidate_person_pairs`, `candidate_person_pairs_summary`) + `data/panel/panel.duckdb` | `data/delpher/` — PDFs (~1.3 GB) + `delpher.duckdb` (OCR/parse tables) |
+| `data/panel/*.parquet` (unified 1848-1937 `candidates_panel` + `persons_post1917`, `elections_post1917`, `gekozen_unmatched`, `mp_anchor`, `mp_anchor_unmatched`, `candidate_roster`, `candidate_person_pairs`, `candidate_person_pairs_summary`, `beroep_hisco_matches`, `dynasty_edges`, `dynasty_candidates`, `candidate_status`) + `data/panel/panel.duckdb` | `data/delpher/` — PDFs (~1.3 GB) + `delpher.duckdb` (OCR/parse tables) |
 | `data/huygens/huygens.duckdb` — scraped candidate data | `data/cbs/scans/` — JPEG page scans (~263 MB) |
 | `data/aieeda/aieeda.duckdb` — ingested municipal party panel | `data/aieeda/*.zip` — OSF download (34 MB) |
 | `data/nlgis/maps/*.topojson` — municipality boundaries | `data/openarch/openarch.duckdb` — raw search hits (~212 MB) |

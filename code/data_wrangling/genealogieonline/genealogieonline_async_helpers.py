@@ -11,10 +11,20 @@
 # only) and matches/scores initials client-side against each hit's full
 # name, parsed from the search-result snippet "Name (YYYY-YYYY) >> tree".
 # Pagination is 15 results/page; stop when a page returns no I<n>.php links.
+#
+# Person-page markup (verified live 2026-07-09, unchanged from the
+# `examples/genealogie/ind_step04_scrape_genealogie.py` template this reuses):
+# occupation lives in a `<ul class="nicelist"><li>Beroep: ...</li>` entry
+# (present only for persons whose tree author recorded one -- absence is
+# normal, not a parse failure); birth place is
+# `<span itemprop="birthPlace">` -> nested `<meta itemprop="addressLocality">`;
+# the male parent is a `<div itemprop="parent">` with a `gender` meta of
+# "male" (a person may have 0-2 `parent` divs; only the male one is the
+# lineage spine, matching ind_step06's father-only-spine rationale).
 # =============================================================================
 import os
 import re
-from urllib.parse import urlencode
+from urllib.parse import urljoin, urlencode
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -69,6 +79,64 @@ def parse_search_results(html: str) -> list[dict]:
     return rows
 
 
+_BEROEP_RE = re.compile(r"[Bb]eroep\s*:")
+
+
+def parse_beroep(soup: BeautifulSoup) -> str | None:
+    for ul in soup.find_all("ul", class_="nicelist"):
+        for li in ul.find_all("li"):
+            text = li.get_text(" ", strip=True)
+            if _BEROEP_RE.match(text):
+                return _BEROEP_RE.sub("", text, count=1).strip().rstrip(".")
+    return None
+
+
+def parse_birth_place(soup: BeautifulSoup) -> str | None:
+    bp_span = soup.find("span", attrs={"itemprop": "birthPlace"})
+    if bp_span:
+        loc = bp_span.find("meta", attrs={"itemprop": "addressLocality"})
+        if loc:
+            return loc.get("content")
+    return None
+
+
+def parse_father(soup: BeautifulSoup, base_url: str) -> tuple[str | None, str | None]:
+    """Return (father_url, father_name) for the first male parent with a page."""
+    for pdiv in soup.find_all(attrs={"itemprop": "parent"}):
+        gm = pdiv.find("meta", attrs={"itemprop": "gender"})
+        if not gm or gm.get("content") != "male":
+            continue
+        father_url = father_name = None
+        um = pdiv.find("meta", attrs={"itemprop": "url"})
+        if um:
+            father_url = um.get("content")
+            if father_url and not father_url.startswith("http"):
+                father_url = urljoin(base_url, father_url)
+        nm = pdiv.find("meta", attrs={"itemprop": "name"})
+        if nm:
+            father_name = nm.get("content")
+        return father_url, father_name
+    return None, None
+
+
+def parse_person_page(html: str, url: str) -> dict:
+    """Parse a genealogieonline person page: full name, beroep, birth place,
+    father link. Returns {} for a 'gone' page (caller checks status first)."""
+    soup = BeautifulSoup(html, "lxml")
+    person_name_full = None
+    nm = soup.find("meta", attrs={"itemprop": "name", "content": True})
+    if nm:
+        person_name_full = nm.get("content")
+    father_url, father_name = parse_father(soup, url)
+    return {
+        "person_name_full": person_name_full,
+        "beroep": parse_beroep(soup),
+        "birth_place": parse_birth_place(soup),
+        "father_url": father_url,
+        "father_name": father_name,
+    }
+
+
 DDL = """
 CREATE TABLE IF NOT EXISTS query_progress (
     era        VARCHAR,
@@ -86,6 +154,25 @@ CREATE TABLE IF NOT EXISTS hits (
     birth_year  INTEGER,
     death_year  INTEGER,
     source_tree VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS person_pages (
+    url              VARCHAR PRIMARY KEY,
+    person_name_full VARCHAR,
+    beroep           VARCHAR,
+    birth_place      VARCHAR,
+    father_url       VARCHAR,
+    father_name      VARCHAR,
+    skip             BOOLEAN DEFAULT FALSE,   -- 404/403/unparseable
+    fetched_at       TIMESTAMP DEFAULT current_timestamp
+);
+
+CREATE TABLE IF NOT EXISTS candidate_ancestors (
+    era   VARCHAR,
+    key   VARCHAR,
+    url   VARCHAR,
+    depth INTEGER,     -- 0 = candidate's own matched person, 1 = father, ...
+    PRIMARY KEY (era, key, url)
 );
 """
 

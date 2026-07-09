@@ -106,3 +106,42 @@ birth-date anchor and common surnames make losers harder to link). Score
 weights were tuned against a 100-sample hand-labelled set (AI-labelled, not
 independently human-verified) stratified across famous MPs, obscure losers,
 and common surnames.
+
+## Phase 3: occupational & dynastic status
+
+`data/panel/candidate_status.parquet` carries, per candidate: own and
+father's occupation string + HISCO/HISCLASS/HISCAM_NL classification,
+dynasty membership (shared-ancestor detection), and the pre-existing
+`titles` field. Scope is deliberately narrow: only the single best-scoring
+`candidate_person_pairs` row per candidate per source, restricted to
+score≥0.7 (~2,700 candidates/source of 5,507), gets an expensive detail-page
+fetch — Phase 2b's hand-labelling showed top-pair precision for common
+surnames was only 13%, so fetching everything would mostly harvest noise.
+
+`openarch_step2_fetch_details.py` calls `records/show.json` on the matched
+civil-registry record to get the candidate's own profession and (via
+`RelationType`, e.g. "Vader van de bruidegom") their father's, from the same
+record. `genealogieonline_step2_fetch_person_pages.py` fetches the matched
+person's page (beroep, birth place) and follows the male-parent link 3
+generations back, building a per-candidate ancestor chain
+(`candidate_ancestors`). `status_step1_hisco_match.py` matches every
+distinct beroep string to HISCO/HISCLASS via the HSN dictionary
+(`examples/hisco/hsn2013a_hisco_comma.csv`), cleaning citation/date-range
+noise and falling back to the first clause of a compound career description
+before giving up (46.9% → 65.8% classified after that fix).
+`status_step2_dynasty_lineage.py` groups candidates into dynasties when
+their patrilineal ancestor chains meet within a combined depth of 3
+(father-son, grandparent-grandchild, siblings, uncle-nephew — NOT first
+cousins, a documented cutoff). `panel_step5_candidate_status.py` assembles
+the final table.
+
+CHECKPOINT (5,507 candidates): own-occupation coverage 17.8% (HISCLASS
+classified 12.1%), father-occupation coverage 16.2% (HISCLASS classified
+12.2%), 2.7% of candidates in a detected dynasty group — all bounded by the
+score≥0.7 scope decision above, not a data-quality ceiling on the matched
+subset itself. See `docs/agent_memory/phase3-occupational-dynastic-status.md`
+for full numbers and a genuine finding: some "two candidates matched to the
+identical GenealogieOnline person" cases are actually the same real
+politician active both before and after the 1917 reform (cross-era
+continuity), not a linkage error — these are excluded from dynasty grouping
+either way since same-person isn't "two relatives."

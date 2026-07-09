@@ -13,6 +13,15 @@
 # eventplace/relationtype -- no `records/show.json` detail call is needed
 # for Phase 2b's identity-matching purpose (a detail call would additionally
 # give profession/parents, deferred to Phase 3).
+#
+# `records/show.json` (added for Phase 3, verified live 2026-07-09): returns
+# `Person[]` (each with `@pid`, `PersonName`, optional `Profession`/`Age`),
+# `Event` (type/date/place), and `RelationEP[]` linking a `PersonKeyRef` to a
+# `RelationType` string for this event ("Bruidegom"/"Bruid", "Vader/Moeder van
+# de bruidegom/bruid" for BS Huwelijk; "Kind"/"Vader"/"Moeder" for BS
+# Geboorte). `Profession` is present on some but not all persons (birth
+# records rarely carry it; marriage records usually do for adults).
+# Used by: openarch_step2_fetch_details.py
 # =============================================================================
 import os
 from urllib.parse import urlencode
@@ -63,6 +72,47 @@ def parse_search_response(data: dict) -> tuple[int, list[dict]]:
     return number_found, rows
 
 
+def show_url(archive_code: str, identifier: str) -> str:
+    return f"{BASE_URL}records/show.json?archive={archive_code}&identifier={identifier}"
+
+
+def parse_show_response(data: dict) -> list[dict]:
+    """Returns one row per RelationEP entry: relation_type, first_name,
+    prefix_last_name, last_name, profession, birth_year, age_literal,
+    event_type, event_year, eventplace."""
+    if not isinstance(data, dict):
+        return []
+    persons = {p["@pid"]: p for p in data.get("Person", []) if isinstance(p, dict) and "@pid" in p}
+    event = data.get("Event", {}) or {}
+    event_date = event.get("EventDate", {}) or {}
+    event_place = (event.get("EventPlace", {}) or {}).get("Place")
+
+    rows = []
+    for rel in data.get("RelationEP", []):
+        if not isinstance(rel, dict):
+            continue
+        person = persons.get(rel.get("PersonKeyRef"), {})
+        pname = person.get("PersonName", {}) or {}
+        if isinstance(pname, list):
+            pname = next((p for p in pname if isinstance(p, dict)), {})
+        age = person.get("Age", {}) or {}
+        profession = person.get("Profession")
+        if isinstance(profession, list):
+            profession = profession[0] if profession else None
+        rows.append({
+            "relation_type": rel.get("RelationType"),
+            "first_name": pname.get("PersonNameFirstName"),
+            "prefix_last_name": pname.get("PersonNamePrefixLastName"),
+            "last_name": pname.get("PersonNameLastName"),
+            "profession": profession,
+            "age_literal": age.get("PersonAgeLiteral"),
+            "event_type": event.get("EventType"),
+            "event_year": event_date.get("Year"),
+            "eventplace": event_place,
+        })
+    return rows
+
+
 DDL = """
 CREATE TABLE IF NOT EXISTS query_progress (
     era        VARCHAR,
@@ -87,6 +137,27 @@ CREATE TABLE IF NOT EXISTS hits (
     event_day    INTEGER,
     eventplace   VARCHAR,
     url          VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS detail_progress (
+    archive_code VARCHAR,
+    identifier   VARCHAR,
+    fetched_at   TIMESTAMP DEFAULT current_timestamp,
+    PRIMARY KEY (archive_code, identifier)
+);
+
+CREATE TABLE IF NOT EXISTS detail_records (
+    archive_code     VARCHAR,
+    identifier       VARCHAR,
+    relation_type    VARCHAR,
+    first_name       VARCHAR,
+    prefix_last_name VARCHAR,
+    last_name        VARCHAR,
+    profession       VARCHAR,
+    age_literal      VARCHAR,
+    event_type       VARCHAR,
+    event_year       INTEGER,
+    eventplace       VARCHAR
 );
 """
 
