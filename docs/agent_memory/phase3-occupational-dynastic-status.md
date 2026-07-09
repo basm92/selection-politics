@@ -21,26 +21,54 @@ Built 2026-07-09 (spec: `phase_2_and_onward.md`, Phase 3). Pipeline, in order:
 5. `code/data_wrangling/panel/panel_step5_candidate_status.py` -- final
    assembly into `data/panel/candidate_status.parquet`.
 
-## Scope decision (score >= 0.5, best pair only)
+## Scope decision (score >= 0.7, best pair only) -- FINAL, after a reversal
 
 Hand-labelling in Phase 2b showed top-scored-pair precision was 71% for
 famous MPs, 49% for obscure losers, but only **13% for common surnames** --
 so fetching detail pages for every one of the 1.28M `candidate_person_pairs`
 rows would spend most of the budget on near-certain wrong matches. Steps 1-2
-above fetch only the single best pair per candidate. This is a real coverage
-ceiling, not a bug -- candidates with no qualifying pair get no occupational
-data by construction.
+above fetch only the single best pair per candidate, at score >= 0.7. This
+is a real coverage ceiling, not a bug -- candidates with no qualifying pair
+get no occupational data by construction.
 
-**Threshold history**: shipped initially at score >= 0.7 (~2,700 candidates/
-source), then widened to **score >= 0.5** at the user's request for more
-coverage (~3,015 openarch / ~2,928 genealogieonline candidates of 5,507).
-This trades some *unquantified* extra precision loss for coverage -- Phase
-2b's hand-labelling checked precision by strata (famous MP/obscure loser/
-common surname), not by score bin, so there is no direct evidence for how
-much noisier the 0.5-0.7 band is versus 0.7+. A ~30-pair hand-label spot
-check of that band was offered but not requested; do one before leaning on
-the expanded coverage for causal claims in the paper. All numbers below are
-post-widening (0.5).
+**Threshold history (do not re-widen without a fresh spot-check)**: shipped
+at 0.7, briefly widened to **score >= 0.5** for more coverage (~3,015
+openarch / ~2,928 genealogieonline candidates of 5,507), then **reverted to
+0.7** after a 30-pair hand-labelled spot-check of the 0.5-0.7 band measured
+only **~30% precision** (9/30: 8 clear TRUE + 1 unsure-lean-true), far below
+even the "obscure loser" strata figure (49%) from Phase 2b. Labelled sample
++ reasoning saved at `docs/agent_memory/phase3_spotcheck_0.5_0.7_band.csv`
+for auditability (AI-derived judgement, not independently human-verified,
+same caveat as the Phase 2b calibration set).
+
+**What actually made most of those pairs wrong**: the scoring gate's floor
+(`0.3 + 0.7*feature`, see Phase 2b memory) lets a pair through at 0.5-0.7 on
+surname+year agreement alone even when the GIVEN NAME is completely wrong --
+most damningly, **7/15 of the openarch failures were outright gender
+mismatches** (candidate matched to an unambiguously female first name like
+"Steijntje", "Gertruda", "Aafke", "Aagje" for what must be a male pre-1918
+district candidate) that the scorer has no feature to catch at all. The
+genealogieonline band did somewhat better (5/15 clear TRUE) but still far
+below 0.7+ strata precision; several of its true positives needed real
+disambiguation work (a hyphenated given name "Eilard-Jacobus" my naive
+initials-splitter mishandled; a "Jhr." nobility title apparently folded into
+the initials field; one candidate ruled TRUE only via outside historical
+knowledge -- "Rutgers V.H." is almost certainly Victor Hugo Rutgers, a real
+ARP minister, which also let me rule out a competing wrong same-surname
+hit). **Do not re-widen this threshold without redoing a spot-check and
+either fixing the gender-blind spot in `panel_step4_candidate_person_pairs.py`'s
+scoring or accepting the same ~30% precision.**
+
+`code/data_wrangling/panel/panel_step5_candidate_status.py` and
+`code/data_wrangling/status/status_step2_dynasty_lineage.py` both
+RE-FILTER to the qualifying (score>=0.7) candidate set at read time rather
+than trusting whatever is currently seeded in `candidate_ancestors` --
+this matters because that table is cumulative (`INSERT OR IGNORE`, never
+pruned) and was seeded wider during the 0.5 experiment. `person_pages` and
+`candidate_ancestors` in the committed `genealogieonline.duckdb` may
+therefore contain more rows than the final `candidate_status.parquet`
+actually uses -- harmless surplus, not stale data in use, but don't assume
+row counts in those raw tables reflect the assembled table's scope.
 
 ## API/parsing notes (verified live 2026-07-09)
 
@@ -76,6 +104,10 @@ post-widening (0.5).
   ("Lid van de Tweede Kamer", "generaal majoor artillerie") that are
   genuinely outside HISCO's occupational vocabulary, not a matching failure --
   a few others are mojibake-encoded (rare, one tree's non-UTF8 export).
+  (These string-level counts are over the WIDER raw fetch left in the
+  duckdbs from the 0.5 experiment, not re-filtered to 0.7 -- harmless, since
+  `status_step1` just builds a beroep->HISCO lookup table; the CHECKPOINT
+  numbers below are the ones that matter and ARE filtered to 0.7.)
 
 ## HISCO matching strategy
 
@@ -100,10 +132,9 @@ find) group transitively into `dynasty_id`.
 
 `depth_a=0 AND depth_b=0` (two *different* roster candidates resolved to the
 *identical* GenealogieOnline person) is flagged `same_person_flag=TRUE` and
-excluded from dynasty edges -- inspecting the (post-widening) 159 such flags
-found the same two distinct, both real, phenomena as the initial 69-flag
-check, in the same rough proportion:
-- **97/159 are cross-era**: the same actual politician campaigned both before
+excluded from dynasty edges -- inspecting the (final, 0.7-filtered) 113 such
+flags found two distinct, both real, phenomena:
+- **83/113 are cross-era**: the same actual politician campaigned both before
   and after the 1917 reform (e.g. "Verkouteren H." 1897-1913 district era and
   "Verkouteren H." 1918 PR era) -- `candidate_roster` keys are era-scoped
   (`persoon_id` vs `person_key`), so the same person legitimately gets two
@@ -111,7 +142,7 @@ check, in the same rough proportion:
   it IS a free cross-era candidate-identity signal that Phase 5 (or a future
   step) could exploit to link a candidate's full 1848-1937 career across the
   reform, not currently done anywhere else in the panel.
-- **62/159 are within-era**: two roster rows for what looks like the same
+- **30/113 are within-era**: two roster rows for what looks like the same
   real person, split by a minor initials/surname-prefix parsing variance
   (e.g. "Doude van Troostwijk H.J." vs "H. J.", "Boer P." vs "de Boer P.",
   "Swierstra N." vs "N. Tj."). This is an upstream `candidate_roster`/source
@@ -119,24 +150,30 @@ check, in the same rough proportion:
   merge these), not a Phase 3 bug -- worth a future cleanup pass, not fixed
   here.
 
-## CHECKPOINT numbers (`candidate_status.parquet`, 5,507 candidates, score>=0.5)
+## CHECKPOINT numbers (`candidate_status.parquet`, 5,507 candidates, score>=0.7, FINAL)
 
-- `own_beroep` coverage: 1,166/5,507 (21.2%); own HISCLASS classified: 796
-  (14.5%)
-- `father_beroep` coverage: 1,208/5,507 (21.9%); father HISCLASS classified:
-  907 (16.5%)
-- Candidates in a dynasty group: 329/5,507 (6.0%); prior_relative_any: 127;
-  later_relative_any: 123
+- `own_beroep` coverage: 982/5,507 (17.8%); own HISCLASS classified: 667
+  (12.1%)
+- `father_beroep` coverage: 937/5,507 (17.0%); father HISCLASS classified:
+  697 (12.7%)
+- Candidates in a dynasty group: 247/5,507 (4.5%); prior_relative_any: 100;
+  later_relative_any: 98
 - `titles` (mr./dr./jhr./baron -- already in `candidates_panel`, no
   scraping needed) present: 1,378/5,507 (25.0%)
 
-(For reference, the initial score>=0.7 run gave: own_beroep 17.8%/HISCLASS
-12.1%, father_beroep 16.2%/HISCLASS 12.2%, dynasty 2.7%.)
+(Dynasty/father-occupation numbers here are slightly HIGHER than the very
+first 0.7 checkpoint -- 2.7%/16.2% -- not because the threshold changed back
+incompletely, but because the 0.5-widening run's fetch pass incidentally
+retried and completed a handful of ancestor-chain pages that had failed
+transiently on the very first pass; `qualifying_candidates()` in
+`status_step2` and `best_pairs()` in `panel_step5` both confirm the
+qualifying candidate SET is identical to the original 0.7 run, 1,866
+genealogieonline candidates -- only the underlying page data got more
+complete, not the scope.)
 
-These are low in absolute terms -- a direct consequence of the score>=0.5
-scope decision above (only ~55% of candidates have a qualifying pair at all,
-and of those only a minority of source pages carry a beroep or a resolvable
+These are low in absolute terms -- a direct consequence of the score>=0.7
+scope decision (only ~50% of candidates have a qualifying pair at all, and
+of those only a minority of source pages carry a beroep or a resolvable
 father link). Report this ceiling explicitly if these numbers feed the
-paper; do not present 21.2%/21.9% as "our occupational data quality" without
-that context, and flag that the 0.5-0.7 band's precision is unverified
-(see the threshold-history note above).
+paper; do not present 17.8%/17.0% as "our occupational data quality" without
+that context.

@@ -15,10 +15,10 @@
 # most of its budget on near-certain wrong matches (top-scored-pair precision
 # was only 13% for common surnames in the calibration sample). Instead this
 # fetches the SINGLE best-scoring openarch pair per candidate, restricted to
-# score >= 0.5 (widened from the initial 0.7 checkpoint -- Phase 2b's
-# hand-labelling only checked precision by strata, not by score bin, so this
-# trades some unquantified precision for ~570 more candidates; reusing
-# already-scored Phase 2b pairs, no new scraping at the search level).
+# score >= 0.7. (Briefly widened to 0.5 for more coverage; a 30-pair
+# hand-labelled spot-check of the 0.5-0.7 band measured ~30% precision --
+# far worse than the 71%/49%/13% strata figures at 0.7+ -- so it was
+# reverted. See docs/agent_memory/phase3-occupational-dynastic-status.md.)
 # Each such pair's record (a BS Geboorte or BS Huwelijk event)
 # is fetched once via records/show.json to recover the candidate's own
 # profession and, via RelationType, their father's (see
@@ -45,7 +45,7 @@ from huygens_async_helpers import TokenBucketRateLimiter
 DB_PATH = "./data/openarch/openarch.duckdb"
 PAIRS_PATH = "./data/panel/candidate_person_pairs.parquet"
 
-SCORE_THRESHOLD = 0.5
+SCORE_THRESHOLD = 0.7
 RATE = 3.0
 CONCURRENCY = 4
 FLUSH_BATCH = 200

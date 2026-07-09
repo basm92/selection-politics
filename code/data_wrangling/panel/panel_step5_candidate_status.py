@@ -22,7 +22,7 @@
 #             prior_relative_elected, later_relative_any, later_relative_elected
 #
 # Occupational status: for the same best-pair openarch record used in
-# openarch_step2 (score >= 0.5), the candidate's OWN role in that record
+# openarch_step2 (score >= 0.7), the candidate's OWN role in that record
 # (hits.relationtype -- "Kind"/"Bruidegom"/"Bruid") identifies which
 # detail_records row is the candidate and which is the father ("Vader" for a
 # birth record, "Vader van de bruidegom/bruid" for a marriage record).
@@ -54,7 +54,7 @@ DYNASTY_EDGES_PATH = "./data/panel/dynasty_edges.parquet"
 DYNASTY_CANDIDATES_PATH = "./data/panel/dynasty_candidates.parquet"
 OUT_PATH = "./data/panel/candidate_status.parquet"
 
-SCORE_THRESHOLD = 0.5
+SCORE_THRESHOLD = 0.7
 
 _FATHER_RELATION = {
     "Kind": "Vader",
@@ -124,19 +124,35 @@ def load_openarch_status() -> pd.DataFrame:
 
 
 def load_genealogieonline_status() -> pd.DataFrame:
-    """own beroep at candidate_ancestors depth=0, father beroep at depth=1."""
+    """own beroep at candidate_ancestors depth=0, father beroep at depth=1,
+    restricted to candidates whose best genealogieonline pair clears
+    SCORE_THRESHOLD -- candidate_ancestors itself may hold a WIDER set (it's
+    seeded by genealogieonline_step2's own SCORE_THRESHOLD, which can drift
+    out of sync with this script's if only one of the two is edited; a
+    hand-labelled spot-check of the 0.5-0.7 band measured ~30% precision, so
+    this filter is not optional)."""
     if not os.path.exists(GENEALOGIE_DB):
         return pd.DataFrame(columns=["era", "key", "own_beroep_genealogieonline",
                                       "father_beroep_genealogieonline"])
+    qualifying = best_pairs("genealogieonline")[["era", "key"]]
+    if qualifying.empty:
+        return pd.DataFrame(columns=["era", "key", "own_beroep_genealogieonline",
+                                      "father_beroep_genealogieonline"])
+
     con = duckdb.connect(GENEALOGIE_DB, read_only=True)
+    con.register("qualifying", qualifying)
     own = con.execute("""
         SELECT ca.era, ca.key, pp.beroep AS own_beroep_genealogieonline
-        FROM candidate_ancestors ca JOIN person_pages pp ON pp.url = ca.url
+        FROM candidate_ancestors ca
+        JOIN person_pages pp ON pp.url = ca.url
+        JOIN qualifying q ON q.era = ca.era AND q.key = ca.key
         WHERE ca.depth = 0
     """).df()
     father = con.execute("""
         SELECT ca.era, ca.key, pp.beroep AS father_beroep_genealogieonline
-        FROM candidate_ancestors ca JOIN person_pages pp ON pp.url = ca.url
+        FROM candidate_ancestors ca
+        JOIN person_pages pp ON pp.url = ca.url
+        JOIN qualifying q ON q.era = ca.era AND q.key = ca.key
         WHERE ca.depth = 1
     """).df()
     con.close()

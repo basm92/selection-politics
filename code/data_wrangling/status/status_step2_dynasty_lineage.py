@@ -44,10 +44,24 @@ import pandas as pd
 
 GENEALOGIE_DB = "./data/genealogieonline/genealogieonline.duckdb"
 ROSTER_PATH = "./data/panel/candidate_roster.parquet"
+PAIRS_PATH = "./data/panel/candidate_person_pairs.parquet"
 EDGES_OUT = "./data/panel/dynasty_edges.parquet"
 CANDIDATES_OUT = "./data/panel/dynasty_candidates.parquet"
 
 MAX_COMBINED_DEPTH = 3
+
+# Must match panel_step5_candidate_status.py's SCORE_THRESHOLD.
+# candidate_ancestors itself may hold a WIDER set (it's seeded by
+# genealogieonline_step2's own SCORE_THRESHOLD, which can drift out of sync
+# with this one if only one is edited) -- a hand-labelled spot-check of the
+# 0.5-0.7 band measured ~30% precision, so re-filtering here is not optional.
+SCORE_THRESHOLD = 0.7
+
+
+def qualifying_candidates() -> pd.DataFrame:
+    pairs = pd.read_parquet(PAIRS_PATH)
+    go = pairs[(pairs["source"] == "genealogieonline") & (pairs["score"] >= SCORE_THRESHOLD)]
+    return go[["era", "key"]].drop_duplicates()
 
 _RELATION_LABELS = {
     (0, 0): "same_matched_person",
@@ -76,14 +90,17 @@ class UnionFind:
             self.parent[max(ra, rb)] = min(ra, rb)
 
 
-def build_edges(con) -> pd.DataFrame:
+def build_edges(con, qualifying: pd.DataFrame) -> pd.DataFrame:
+    con.register("qualifying", qualifying)
     raw = con.execute("""
         SELECT a.era AS era_a, a.key AS key_a, b.era AS era_b, b.key AS key_b,
                a.url AS shared_url, a.depth AS depth_a, b.depth AS depth_b
         FROM candidate_ancestors a
+        JOIN qualifying qa ON qa.era = a.era AND qa.key = a.key
         JOIN candidate_ancestors b
           ON a.url = b.url
          AND (a.era, a.key) < (b.era, b.key)
+        JOIN qualifying qb ON qb.era = b.era AND qb.key = b.key
         WHERE a.depth + b.depth <= ?
     """, [MAX_COMBINED_DEPTH]).df()
 
@@ -157,8 +174,9 @@ def build_candidate_indicators(edges: pd.DataFrame, roster: pd.DataFrame) -> pd.
 
 
 def build() -> None:
+    qualifying = qualifying_candidates()
     con = duckdb.connect(GENEALOGIE_DB, read_only=True)
-    edges = build_edges(con)
+    edges = build_edges(con, qualifying)
     con.close()
 
     os.makedirs(os.path.dirname(EDGES_OUT), exist_ok=True)

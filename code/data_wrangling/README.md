@@ -114,15 +114,20 @@ father's occupation string + HISCO/HISCLASS/HISCAM_NL classification,
 dynasty membership (shared-ancestor detection), and the pre-existing
 `titles` field. Scope is deliberately narrow: only the single best-scoring
 `candidate_person_pairs` row per candidate per source, restricted to
-score≥0.5 (widened from an initial 0.7 checkpoint -- ~3,015 openarch /
-~2,928 genealogieonline candidates of 5,507), gets an expensive detail-page
-fetch — Phase 2b's hand-labelling showed top-pair precision for common
-surnames was only 13%, so fetching everything would mostly harvest noise.
-The 0.5 cutoff trades some unquantified extra precision loss for coverage:
-Phase 2b's hand-labelling checked precision by strata (famous MP/obscure
-loser/common surname), not by score bin, so there's no direct evidence for
-how much noisier the 0.5-0.7 band is versus 0.7+ -- a spot-check would be
-needed before leaning on this for causal claims.
+score≥0.7 (~2,700 candidates of 5,507 per source), gets an expensive
+detail-page fetch — Phase 2b's hand-labelling showed top-pair precision for
+common surnames was only 13%, so fetching everything would mostly harvest
+noise. The threshold was briefly widened to 0.5 for more coverage, then
+**reverted** after a 30-pair hand-labelled spot-check of the 0.5-0.7 band
+measured only ~30% precision (dominated by gender mismatches the scoring
+gate has no feature to catch) — see
+`docs/agent_memory/phase3-occupational-dynastic-status.md` and
+`docs/agent_memory/phase3_spotcheck_0.5_0.7_band.csv` for the labelled
+sample. `panel_step5_candidate_status.py` and `status_step2_dynasty_lineage.py`
+both re-filter to the qualifying score≥0.7 set at read time rather than
+trusting whatever's cached in `candidate_ancestors` (that table is
+cumulative and was seeded wider during the 0.5 experiment — harmless
+surplus, not stale data in use).
 
 `openarch_step2_fetch_details.py` calls `records/show.json` on the matched
 civil-registry record to get the candidate's own profession and (via
@@ -141,10 +146,10 @@ their patrilineal ancestor chains meet within a combined depth of 3
 cousins, a documented cutoff). `panel_step5_candidate_status.py` assembles
 the final table.
 
-CHECKPOINT (5,507 candidates): own-occupation coverage 21.2% (HISCLASS
-classified 14.5%), father-occupation coverage 21.9% (HISCLASS classified
-16.5%), 6.0% of candidates in a detected dynasty group — all bounded by the
-score≥0.5 scope decision above, not a data-quality ceiling on the matched
+CHECKPOINT (5,507 candidates): own-occupation coverage 17.8% (HISCLASS
+classified 12.1%), father-occupation coverage 17.0% (HISCLASS classified
+12.7%), 4.5% of candidates in a detected dynasty group — all bounded by the
+score≥0.7 scope decision above, not a data-quality ceiling on the matched
 subset itself. See `docs/agent_memory/phase3-occupational-dynastic-status.md`
 for full numbers and a genuine finding: some "two candidates matched to the
 identical GenealogieOnline person" cases are actually the same real
